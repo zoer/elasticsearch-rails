@@ -154,7 +154,6 @@ if ENV["MONGODB_AVAILABLE"]
             assert_equal 'Testing Coding', response.records.first.title
           end
 
-
           context "importing" do
             setup do
               MongoidArticle.delete_all
@@ -186,8 +185,35 @@ if ENV["MONGODB_AVAILABLE"]
           end
         end
 
+        context "Mongoid integration with kaminari" do
+          class ::MongoidArticleKaminari < ::MongoidArticle
+            include ::Kaminari::ConfigurationMethods
+          end
+
+          setup do
+            Elasticsearch::Model::Adapter.register \
+              Elasticsearch::Model::Adapter::Mongoid,
+              lambda { |klass| !!defined?(::Mongoid::Document) && klass.ancestors.include?(::Mongoid::Document) }
+
+            MongoidArticleKaminari.__elasticsearch__.create_index! force: true
+
+            MongoidArticleKaminari.delete_all
+
+            10.times do |i|
+              MongoidArticleKaminari.create! title: "#{"test "*rand(1..5)}"
+            end
+
+            MongoidArticleKaminari.__elasticsearch__.refresh_index!
+            MongoidArticleKaminari.__elasticsearch__.client.cluster.health wait_for_status: 'yellow'
+          end
+
+          should "not lose sort order on map" do
+            records = MongoidArticleKaminari.search(query: {match: {title: {query: 'test'}}}).page(1).limit(100).records
+
+            assert_equal records.map(&:id) , records.to_a.map(&:id)
+          end
+        end
       end
     end
   end
-
 end
