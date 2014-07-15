@@ -199,8 +199,8 @@ if ENV["MONGODB_AVAILABLE"]
 
             MongoidArticleKaminari.delete_all
 
-            10.times do |i|
-              MongoidArticleKaminari.create! title: "#{"test "*rand(1..5)}"
+            10.times do
+              MongoidArticleKaminari.create! title: "test "*rand(1..5)
             end
 
             MongoidArticleKaminari.__elasticsearch__.refresh_index!
